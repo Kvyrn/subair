@@ -1,7 +1,8 @@
+use bevy::{input::mouse::MouseMotion, prelude::*};
+use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 use std::f32::consts::PI;
 
-use bevy::prelude::*;
-use bevy_inspector_egui::quick::ResourceInspectorPlugin;
+const SENSITIVITY: f32 = 0.05;
 
 pub struct PlayerPlugin;
 
@@ -34,7 +35,7 @@ struct Propeller;
 struct CalculatedInput {
     vertical: f32,
     horizontal: f32,
-    forward: bool,
+    forward: f32,
 }
 
 #[derive(Debug, Component, Reflect, Default)]
@@ -60,27 +61,26 @@ fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
-fn update_input(keys: Res<Input<KeyCode>>, ,mut calcd: ResMut<CalculatedInput>) {
-    let right = keys.pressed(KeyCode::D);
-    let left = keys.pressed(KeyCode::A);
-    let up = keys.pressed(KeyCode::W);
-    let down = keys.pressed(KeyCode::S);
-    let forward = keys.pressed(KeyCode::Space);
-
-    let horizontal = match (left, right) {
+fn update_input(
+    keys: Res<Input<KeyCode>>,
+    mut mouse: EventReader<MouseMotion>,
+    mut calcd: ResMut<CalculatedInput>,
+) {
+    let forward = keys.pressed(KeyCode::W);
+    let backward = keys.pressed(KeyCode::S);
+    let forward = match (forward, backward) {
         (true, false) => 1.0,
         (false, true) => -1.0,
         _ => 0.0,
     };
-    let vertical = match (down, up) {
-        (true, false) => -1.0,
-        (false, true) => 1.0,
-        _ => 0.0,
-    };
+    let mut mouse_delta = Vec2::ZERO;
+    for event in mouse.iter() {
+        mouse_delta += event.delta;
+    }
 
-    calcd.horizontal = horizontal;
-    calcd.vertical = vertical;
     calcd.forward = forward;
+    calcd.horizontal = -mouse_delta.x * SENSITIVITY;
+    calcd.vertical = -mouse_delta.y * SENSITIVITY;
 }
 
 fn calculate_rotation(
@@ -114,10 +114,8 @@ fn movement(
     for (mut transform, controlled) in query.iter_mut() {
         transform.rotation =
             Quat::from_rotation_y(controlled.yaw) * Quat::from_rotation_x(controlled.pitch);
-        if input.forward {
-            let trans = transform.forward() * time.delta_seconds() * 20.0;
-            transform.translation += trans;
-        }
+        let trans = transform.forward() * time.delta_seconds() * 20.0 * input.forward;
+        transform.translation += trans;
     }
 }
 

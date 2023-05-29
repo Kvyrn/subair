@@ -1,6 +1,6 @@
 mod player;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, window::CursorGrabMode};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use player::PlayerPlugin;
 
@@ -15,11 +15,31 @@ fn main() {
             ..default()
         }))
         .add_plugin(WorldInspectorPlugin::new())
-        .add_system(bevy::window::close_on_esc)
+        .add_system(bevy::window::close_on_esc.after(capture_cursor))
         .add_plugin(PlayerPlugin)
         .insert_resource(ClearColor(Color::rgb(0.05, 0.0, 0.2)))
         .add_startup_system(basic_scene)
+        .add_system(capture_cursor)
         .run();
+}
+
+fn capture_cursor(
+    mut windows: Query<&mut Window>,
+    mouse: Res<Input<MouseButton>>,
+    key: Res<Input<KeyCode>>,
+) {
+    if mouse.just_pressed(MouseButton::Left) {
+        for mut win in windows.iter_mut() {
+            win.cursor.visible = false;
+            win.cursor.grab_mode = CursorGrabMode::Locked;
+        }
+    }
+    if key.just_pressed(KeyCode::Escape) {
+        for mut win in windows.iter_mut() {
+            win.cursor.visible = true;
+            win.cursor.grab_mode = CursorGrabMode::None
+        }
+    }
 }
 
 fn basic_scene(
