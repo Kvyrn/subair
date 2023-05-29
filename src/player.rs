@@ -1,14 +1,22 @@
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
+use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Player>()
+            .register_type::<CalculatedInput>()
+            .register_type::<Controlled>()
+            .insert_resource(CalculatedInput::default())
+            .add_plugin(ResourceInspectorPlugin::<CalculatedInput>::new())
             .add_system(register_propeller)
             .add_startup_system(spawn_player)
+            .add_system(update_input)
+            .add_system(calculate_rotation.after(update_input))
+            .add_system(movement.after(calculate_rotation))
             .add_system(rotate_propeller);
     }
 }
@@ -22,13 +30,95 @@ struct Player {
 #[derive(Debug, Component)]
 struct Propeller;
 
+#[derive(Debug, Resource, Reflect, Default)]
+struct CalculatedInput {
+    vertical: f32,
+    horizontal: f32,
+    forward: bool,
+}
+
+#[derive(Debug, Component, Reflect, Default)]
+struct Controlled {
+    pitch: f32,
+    yaw: f32,
+}
+
 fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let cam = commands.spawn(Camera3dBundle::default()).id();
-    commands.spawn(SceneBundle {
-        scene: asset_server.load("player.glb#Scene0"),
-        transform: Transform::from_xyz(0.0, 0.0, -3.0),
-        ..default()
-    });
+    commands
+        .spawn(Controlled::default())
+        .insert(SpatialBundle::default())
+        .with_children(|b| {
+            b.spawn(Camera3dBundle {
+                transform: Transform::from_xyz(0.0, 2.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+                ..default()
+            });
+            b.spawn(SceneBundle {
+                scene: asset_server.load("player.glb#Scene0"),
+                transform: Transform::from_rotation(Quat::from_rotation_y(PI / -2.0)),
+                ..default()
+            });
+        });
+}
+
+fn update_input(keys: Res<Input<KeyCode>>, ,mut calcd: ResMut<CalculatedInput>) {
+    let right = keys.pressed(KeyCode::D);
+    let left = keys.pressed(KeyCode::A);
+    let up = keys.pressed(KeyCode::W);
+    let down = keys.pressed(KeyCode::S);
+    let forward = keys.pressed(KeyCode::Space);
+
+    let horizontal = match (left, right) {
+        (true, false) => 1.0,
+        (false, true) => -1.0,
+        _ => 0.0,
+    };
+    let vertical = match (down, up) {
+        (true, false) => -1.0,
+        (false, true) => 1.0,
+        _ => 0.0,
+    };
+
+    calcd.horizontal = horizontal;
+    calcd.vertical = vertical;
+    calcd.forward = forward;
+}
+
+fn calculate_rotation(
+    input: Res<CalculatedInput>,
+    mut query: Query<&mut Controlled>,
+    time: Res<Time>,
+) {
+    for mut controlled in query.iter_mut() {
+        controlled.pitch += input.vertical * time.delta_seconds();
+        controlled.yaw += input.horizontal * time.delta_seconds();
+        controlled.pitch = wrap_rotation(controlled.pitch);
+        controlled.yaw = wrap_rotation(controlled.yaw);
+    }
+}
+
+fn wrap_rotation(mut rot: f32) -> f32 {
+    while rot > (PI * 2.0) {
+        rot -= PI * 2.0;
+    }
+    while rot < (PI * 2.0) {
+        rot += PI * 2.0;
+    }
+    rot
+}
+
+fn movement(
+    mut query: Query<(&mut Transform, &Controlled)>,
+    input: Res<CalculatedInput>,
+    time: Res<Time>,
+) {
+    for (mut transform, controlled) in query.iter_mut() {
+        transform.rotation =
+            Quat::from_rotation_y(controlled.yaw) * Quat::from_rotation_x(controlled.pitch);
+        if input.forward {
+            let trans = transform.forward() * time.delta_seconds() * 20.0;
+            transform.translation += trans;
+        }
+    }
 }
 
 fn register_propeller(
