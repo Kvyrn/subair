@@ -2,6 +2,7 @@ mod player;
 
 use bevy::{prelude::*, window::CursorGrabMode};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_rapier3d::prelude::*;
 use player::PlayerPlugin;
 
 fn main() {
@@ -15,6 +16,7 @@ fn main() {
             ..default()
         }))
         .add_plugin(WorldInspectorPlugin::new())
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_system(bevy::window::close_on_esc.after(capture_cursor))
         .add_plugin(PlayerPlugin)
         .insert_resource(ClearColor(Color::rgb(0.05, 0.0, 0.2)))
@@ -34,7 +36,7 @@ fn capture_cursor(
             win.cursor.grab_mode = CursorGrabMode::Locked;
         }
     }
-    if key.just_pressed(KeyCode::Escape) {
+    if key.any_pressed([KeyCode::Escape, KeyCode::Q]) {
         for mut win in windows.iter_mut() {
             win.cursor.visible = true;
             win.cursor.grab_mode = CursorGrabMode::None
@@ -48,12 +50,14 @@ fn basic_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // Ground
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(shape::Box::new(100.0, 1.0, 100.0).into()),
-        material: materials.add(Color::AQUAMARINE.into()),
-        transform: Transform::from_xyz(0.0, -5.0, 0.0),
-        ..default()
-    });
+    commands
+        .spawn(PbrBundle {
+            mesh: meshes.add(shape::Box::new(100.0, 1.0, 100.0).into()),
+            material: materials.add(Color::AQUAMARINE.into()),
+            transform: Transform::from_xyz(0.0, -5.0, 0.0),
+            ..default()
+        })
+        .insert((RigidBody::Fixed, Collider::cuboid(50.0, 0.5, 50.0)));
     // Light
     commands.spawn(PointLightBundle {
         point_light: PointLight {

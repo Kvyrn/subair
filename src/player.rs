@@ -1,5 +1,6 @@
 use bevy::{input::mouse::MouseMotion, prelude::*};
 use bevy_inspector_egui::quick::ResourceInspectorPlugin;
+use bevy_rapier3d::prelude::*;
 use std::f32::consts::PI;
 
 const SENSITIVITY: f32 = 0.05;
@@ -48,6 +49,13 @@ fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(Controlled::default())
         .insert(SpatialBundle::default())
+        .insert((
+            RigidBody::KinematicPositionBased,
+            Collider::ball(0.8),
+            // Collider::capsule_z(0.8, 0.5),
+            KinematicCharacterController::default(),
+            Velocity::default(),
+        ))
         .with_children(|b| {
             b.spawn(Camera3dBundle {
                 transform: Transform::from_xyz(0.0, 2.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -56,6 +64,17 @@ fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
             b.spawn(SceneBundle {
                 scene: asset_server.load("player.glb#Scene0"),
                 transform: Transform::from_rotation(Quat::from_rotation_y(PI / -2.0)),
+                ..default()
+            });
+            b.spawn(SpotLightBundle {
+                spot_light: SpotLight {
+                    intensity: 2000.0,
+                    range: 100.0,
+                    outer_angle: PI / 6.0,
+                    color: Color::rgb(1.0, 0.9, 0.7),
+                    ..default()
+                },
+                transform: Transform::from_xyz(0.0, 0.0, -1.0),
                 ..default()
             });
         });
@@ -107,15 +126,19 @@ fn wrap_rotation(mut rot: f32) -> f32 {
 }
 
 fn movement(
-    mut query: Query<(&mut Transform, &Controlled)>,
+    mut query: Query<(
+        &mut KinematicCharacterController,
+        &mut Transform,
+        &Controlled,
+    )>,
     input: Res<CalculatedInput>,
     time: Res<Time>,
 ) {
-    for (mut transform, controlled) in query.iter_mut() {
+    for (mut controller, mut transform, controlled) in query.iter_mut() {
         transform.rotation =
             Quat::from_rotation_y(controlled.yaw) * Quat::from_rotation_x(controlled.pitch);
         let trans = transform.forward() * time.delta_seconds() * 20.0 * input.forward;
-        transform.translation += trans;
+        controller.translation = Some(trans);
     }
 }
 
