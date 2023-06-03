@@ -9,7 +9,7 @@ use std::time::Instant;
 use tracing::instrument;
 
 const FLOOR: f32 = 0.0;
-const VERTEX_GROUP_MAX_DISTANCE: f32 = 0.1;
+const VERTEX_GROUP_MAX_DISTANCE: f32 = 1.0e-7;
 const WORLD_SIZE: usize = 100;
 
 #[instrument]
