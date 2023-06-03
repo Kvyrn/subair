@@ -49,18 +49,18 @@ fn capture_cursor(
 
 fn basic_scene(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    // mut meshes: ResMut<Assets<Mesh>>,
+    // mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // Ground
-    commands
-        .spawn(PbrBundle {
-            mesh: meshes.add(shape::Box::new(100.0, 1.0, 100.0).into()),
-            material: materials.add(Color::AQUAMARINE.into()),
-            transform: Transform::from_xyz(0.0, -5.0, 0.0),
-            ..default()
-        })
-        .insert((RigidBody::Fixed, Collider::cuboid(50.0, 0.5, 50.0)));
+    // commands
+    //     .spawn(PbrBundle {
+    //         mesh: meshes.add(shape::Box::new(100.0, 1.0, 100.0).into()),
+    //         material: materials.add(Color::AQUAMARINE.into()),
+    //         transform: Transform::from_xyz(0.0, -5.0, 0.0),
+    //         ..default()
+    //     })
+    //     .insert((RigidBody::Fixed, Collider::cuboid(50.0, 0.5, 50.0)));
     // Light
     commands.spawn(PointLightBundle {
         point_light: PointLight {

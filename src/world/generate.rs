@@ -9,19 +9,25 @@ use std::time::Instant;
 use tracing::instrument;
 
 const FLOOR: f32 = 0.0;
-const VERTEX_GROUP_MAX_DISTANCE: f32 = 0.01;
+const VERTEX_GROUP_MAX_DISTANCE: f32 = 0.1;
+const WORLD_SIZE: usize = 100;
 
 #[instrument]
 pub fn generate_world(seed: u64) -> (Mesh, Collider) {
     let start = Instant::now();
-    let simple_vertices = marching_cubes(100, 100, 100, seed);
+    let simple_vertices = marching_cubes(WORLD_SIZE, WORLD_SIZE, WORLD_SIZE, seed);
     info!(
         num_vertices = simple_vertices.len(),
         "Generated mesh in {:.3}ms",
         start.elapsed().as_secs_f32() * 1000.0
     );
     let (vertices, indices) = deduplicate_vertices(simple_vertices);
-    let vertices: Vec<_> = vertices.into_iter().map(|v| v.to_array()).collect();
+    let translation = Vec3::splat(WORLD_SIZE as f32 / -2.0);
+    let vertices: Vec<_> = vertices
+        .into_iter()
+        .map(|v| v + translation)
+        .map(|v| v.to_array())
+        .collect();
     let normals = calculate_normals(&vertices, &indices);
 
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
@@ -32,7 +38,7 @@ pub fn generate_world(seed: u64) -> (Mesh, Collider) {
     let collider_indices = {
         let mut vec = vec![];
         for i in 0..(indices.len() / 3) {
-            vec.push([indices[i], indices[i + 1], indices[i + 2]]);
+            vec.push([indices[i * 3], indices[i * 3 + 1], indices[i * 3 + 2]]);
         }
         vec
     };
@@ -62,7 +68,6 @@ fn deduplicate_vertices(input: Vec<Vec3>) -> (Vec<Vec3>, Vec<u32>) {
         }
         let vert_index = vertices.len();
         vertices.push(*point);
-        indices[index] = Some(vert_index);
         points_in_range(
             &tree,
             *point,
@@ -73,8 +78,9 @@ fn deduplicate_vertices(input: Vec<Vec3>) -> (Vec<Vec3>, Vec<u32>) {
         );
     }
     info!(
-        "Deduplicated vertices in {:.3}ms",
-        start.elapsed().as_secs_f32() * 1000.0
+        "Deduplicated vertices in {:.3}ms, removed {:.2}% of vertices",
+        start.elapsed().as_secs_f32() * 1000.0,
+        (1.0 - vertices.len() as f32 / (indices.len() as f32)) * 100.0
     );
     let indices = indices
         .into_iter()
@@ -134,12 +140,11 @@ fn add_points(p1: [usize; 3], p2: [usize; 3]) -> [usize; 3] {
 
 fn init_noise(seed: u64) -> FastNoise {
     let mut noise = FastNoise::seeded(seed);
-    // noise.set_noise_type(NoiseType::PerlinFractal);
-    // noise.set_fractal_type(FractalType::FBM);
-    // noise.set_fractal_octaves(5);
-    // noise.set_fractal_gain(0.6);
-    // noise.set_fractal_lacunarity(2.0);
-    noise.set_frequency(20.0);
-    // noise.set_noise_type(NoiseType::Perlin);
+    noise.set_noise_type(NoiseType::PerlinFractal);
+    noise.set_fractal_type(FractalType::FBM);
+    noise.set_fractal_octaves(1);
+    noise.set_fractal_gain(0.6);
+    noise.set_fractal_lacunarity(2.0);
+    noise.set_frequency(0.05);
     noise
 }

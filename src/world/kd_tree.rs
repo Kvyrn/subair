@@ -38,7 +38,7 @@ fn search_for_close_points(
                 for child in children.iter() {
                     search_for_close_points(child, searched_point, range, point_consumer);
                 }
-            } else if distance < 0.0 {
+            } else if distance > 0.0 {
                 search_for_close_points(&children[0], searched_point, range, point_consumer);
             } else {
                 search_for_close_points(&children[1], searched_point, range, point_consumer);
@@ -68,6 +68,9 @@ fn signed_distance_on_axis(point1: Vec3, point2: Vec3, axis: Axis) -> f32 {
 }
 
 pub fn construct_tree(points: &[Vec3]) -> Tree3d {
+    if points.is_empty() {
+        panic!("Refusing to construct empty tree");
+    }
     // Point indices must be remembered
     let mut points: Vec<_> = points
         .iter()
