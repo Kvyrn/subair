@@ -15,3 +15,6 @@ opt-level = 3
 bevy = "0.10.1"
 bevy-inspector-egui = "0.18.3"
 bevy_rapier3d = "0.21.0"
+bracket-noise = "0.8.7"
+futures-lite = "1.13.0"
+tracing = "0.1.37"

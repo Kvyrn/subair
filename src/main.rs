@@ -1,9 +1,11 @@
 mod player;
+mod world;
 
 use bevy::{prelude::*, window::CursorGrabMode};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::*;
 use player::PlayerPlugin;
+use world::WorldPlugin;
 
 fn main() {
     App::new()
@@ -19,6 +21,7 @@ fn main() {
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_system(bevy::window::close_on_esc.after(capture_cursor))
         .add_plugin(PlayerPlugin)
+        .add_plugin(WorldPlugin)
         .insert_resource(ClearColor(Color::rgb(0.05, 0.0, 0.2)))
         .add_startup_system(basic_scene)
         .add_system(capture_cursor)

@@ -2,6 +2,7 @@ use bevy::{input::mouse::MouseMotion, prelude::*};
 use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 use bevy_rapier3d::prelude::*;
 use std::f32::consts::PI;
+use tracing::info;
 
 const SENSITIVITY: f32 = 0.05;
 
@@ -142,6 +143,7 @@ fn movement(
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn register_propeller(
     query: Query<(Entity, &Name), (Without<Propeller>, Added<Name>)>,
     mut commands: Commands,
