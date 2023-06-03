@@ -1,30 +1,27 @@
+use super::kd_tree::{construct_tree, points_in_range};
 use super::marching_cubes_tables::{EDGES, POINT_OFFSETS, TRIANGLE_LISTS};
 use super::normals::calculate_normals;
 use bevy::render::mesh::Indices;
-use bevy::{prelude::*, render::render_resource::PrimitiveTopology, utils::Instant};
+use bevy::{prelude::*, render::render_resource::PrimitiveTopology};
 use bevy_rapier3d::prelude::*;
 use bracket_noise::prelude::*;
+use std::time::Instant;
 use tracing::instrument;
 
 const FLOOR: f32 = 0.0;
 const VERTEX_GROUP_MAX_DISTANCE: f32 = 0.01;
 
 #[instrument]
-pub async fn generate_world(seed: u64) -> (Mesh, Collider) {
+pub fn generate_world(seed: u64) -> (Mesh, Collider) {
     let start = Instant::now();
     let simple_vertices = marching_cubes(100, 100, 100, seed);
     info!(
         num_vertices = simple_vertices.len(),
-        "Generated mesh in {}ms",
-        start.elapsed().as_secs_f32() / 1000.0
+        "Generated mesh in {:.3}ms",
+        start.elapsed().as_secs_f32() * 1000.0
     );
-    let start = Instant::now();
     let (vertices, indices) = deduplicate_vertices(simple_vertices);
     let vertices: Vec<_> = vertices.into_iter().map(|v| v.to_array()).collect();
-    info!(
-        "Deduplicated vertices in {}ms",
-        start.elapsed().as_secs_f32() / 1000.0
-    );
     let normals = calculate_normals(&vertices, &indices);
 
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
@@ -48,18 +45,41 @@ pub async fn generate_world(seed: u64) -> (Mesh, Collider) {
 
 #[instrument(skip(input))]
 fn deduplicate_vertices(input: Vec<Vec3>) -> (Vec<Vec3>, Vec<u32>) {
-    let mut vertices: Vec<Vec3> = vec![];
-    let mut indices = vec![];
-    'vertices: for vert in input.iter() {
-        for (i, sim) in vertices.iter().enumerate() {
-            if (*vert - *sim).length_squared() < VERTEX_GROUP_MAX_DISTANCE {
-                indices.push(i as u32);
-                continue 'vertices;
-            }
+    let start = Instant::now();
+    let tree = construct_tree(&input);
+    info!(
+        "Constructed tree in {:.3}ms",
+        start.elapsed().as_secs_f32() * 1000.0
+    );
+
+    let start = Instant::now();
+    let mut indices = vec![None; input.len()];
+    let mut vertices = vec![];
+
+    for (index, point) in input.iter().enumerate() {
+        if indices[index].is_some() {
+            continue;
         }
-        indices.push(vertices.len() as u32);
-        vertices.push(*vert);
+        let vert_index = vertices.len();
+        vertices.push(*point);
+        indices[index] = Some(vert_index);
+        points_in_range(
+            &tree,
+            *point,
+            VERTEX_GROUP_MAX_DISTANCE,
+            |(_, close_point_index)| {
+                indices[close_point_index] = Some(vert_index);
+            },
+        );
     }
+    info!(
+        "Deduplicated vertices in {:.3}ms",
+        start.elapsed().as_secs_f32() * 1000.0
+    );
+    let indices = indices
+        .into_iter()
+        .map(|i| i.expect("Point not found (shouldn't happen)") as u32)
+        .collect();
     (vertices, indices)
 }
 

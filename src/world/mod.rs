@@ -1,4 +1,5 @@
 mod generate;
+mod kd_tree;
 mod marching_cubes_tables;
 mod normals;
 
@@ -46,7 +47,12 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
 
 fn schedule_world_gen(info: Res<WorldInfo>, mut commands: Commands) {
     let pool = AsyncComputeTaskPool::get();
-    let task = pool.spawn(generate::generate_world(info.seed));
+    let seed = info.seed;
+    let task = pool.spawn(async move {
+        std::thread::spawn(move || generate::generate_world(seed))
+            .join()
+            .unwrap()
+    });
     commands.spawn(WorldMeshTask(task));
 }
 
