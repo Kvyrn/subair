@@ -23,7 +23,6 @@ fn main() {
         .add_plugin(PlayerPlugin)
         .add_plugin(WorldPlugin)
         .insert_resource(ClearColor(Color::rgb(0.05, 0.0, 0.2)))
-        .add_startup_system(basic_scene)
         .add_system(capture_cursor)
         .run();
 }
@@ -45,30 +44,4 @@ fn capture_cursor(
             win.cursor.grab_mode = CursorGrabMode::None
         }
     }
-}
-
-fn basic_scene(
-    mut commands: Commands,
-    // mut meshes: ResMut<Assets<Mesh>>,
-    // mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    // Ground
-    // commands
-    //     .spawn(PbrBundle {
-    //         mesh: meshes.add(shape::Box::new(100.0, 1.0, 100.0).into()),
-    //         material: materials.add(Color::AQUAMARINE.into()),
-    //         transform: Transform::from_xyz(0.0, -5.0, 0.0),
-    //         ..default()
-    //     })
-    //     .insert((RigidBody::Fixed, Collider::cuboid(50.0, 0.5, 50.0)));
-    // Light
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            intensity: 1500.0,
-            shadows_enabled: true,
-            ..default()
-        },
-        transform: Transform::from_xyz(0.0, 10.0, 0.0),
-        ..default()
-    });
 }
