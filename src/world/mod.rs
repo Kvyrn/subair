@@ -7,7 +7,6 @@ use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
 };
-use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 use bevy_rapier3d::prelude::*;
 use futures_lite::future::{block_on, poll_once};
 
@@ -16,7 +15,6 @@ pub struct WorldPlugin;
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<WorldInfo>()
-            .add_plugin(ResourceInspectorPlugin::<WorldInfo>::new())
             .insert_resource(WorldInfo {
                 seed: 23478235784239483,
             })

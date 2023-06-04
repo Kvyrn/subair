@@ -59,17 +59,25 @@ fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
         ))
         .with_children(|b| {
             b.spawn(Camera3dBundle {
-                transform: Transform::from_xyz(0.0, 0.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
+                transform: Transform::from_xyz(0.0, 0.0, 0.0), //.looking_at(Vec3::ZERO, Vec3::Y),
+                ..default()
+            })
+            .insert(FogSettings {
+                color: Color::rgb(0.0, 0.0, 0.5),
+                falloff: FogFalloff::from_visibility_color(150.0, Color::rgb(0.0, 0.0, 0.9)),
                 ..default()
             });
+
             b.spawn(SceneBundle {
                 scene: asset_server.load("player.glb#Scene0"),
                 transform: Transform::from_rotation(Quat::from_rotation_y(PI / -2.0)),
                 ..default()
-            });
+            })
+            .insert(Visibility::Hidden);
+
             b.spawn(SpotLightBundle {
                 spot_light: SpotLight {
-                    intensity: 2000.0,
+                    intensity: 20000.0,
                     range: 100.0,
                     outer_angle: PI / 6.0,
                     color: Color::rgb(1.0, 0.9, 0.7),
