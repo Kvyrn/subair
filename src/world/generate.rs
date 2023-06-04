@@ -21,12 +21,7 @@ pub fn generate_world(seed: u64, offset: Vec3, size: usize) -> (Mesh, Collider, 
         start.elapsed().as_secs_f32() * 1000.0
     );
     let (vertices, indices) = deduplicate_vertices(simple_vertices);
-    let translation = Vec3::splat(size as f32 / -2.0);
-    let vertices: Vec<_> = vertices
-        .into_iter()
-        .map(|v| v + translation)
-        .map(|v| v.to_array())
-        .collect();
+    let vertices: Vec<_> = vertices.into_iter().map(|v| v.to_array()).collect();
     let normals = calculate_normals(&vertices, &indices);
 
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
