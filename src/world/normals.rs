@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use std::time::Instant;
-use tracing::{info, info_span, trace};
+use tracing::{debug, info_span, trace};
 
 pub fn calculate_normals(vertices: &[[f32; 3]], indices: &[u32]) -> Vec<[f32; 3]> {
     let _e = info_span!(
@@ -39,7 +39,7 @@ pub fn calculate_normals(vertices: &[[f32; 3]], indices: &[u32]) -> Vec<[f32; 3]
     }
 
     let output = vertex_normals.iter().map(|v| v.normalize().into());
-    info!(
+    debug!(
         "Generated normals, elapsed: {}ms",
         now.elapsed().as_millis()
     );

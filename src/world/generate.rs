@@ -6,23 +6,22 @@ use bevy::{prelude::*, render::render_resource::PrimitiveTopology};
 use bevy_rapier3d::prelude::*;
 use bracket_noise::prelude::*;
 use std::time::Instant;
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 const FLOOR: f32 = 0.0;
 const VERTEX_GROUP_MAX_DISTANCE: f32 = 1.0e-7;
-const WORLD_SIZE: usize = 100;
 
-#[instrument]
-pub fn generate_world(seed: u64) -> (Mesh, Collider) {
+#[instrument(skip(offset))]
+pub fn generate_world(seed: u64, offset: Vec3, size: usize) -> (Mesh, Collider, Vec3) {
     let start = Instant::now();
-    let simple_vertices = marching_cubes(WORLD_SIZE, WORLD_SIZE, WORLD_SIZE, seed);
-    info!(
+    let simple_vertices = marching_cubes(size, size, size, seed, offset);
+    debug!(
         num_vertices = simple_vertices.len(),
         "Generated mesh in {:.3}ms",
         start.elapsed().as_secs_f32() * 1000.0
     );
     let (vertices, indices) = deduplicate_vertices(simple_vertices);
-    let translation = Vec3::splat(WORLD_SIZE as f32 / -2.0);
+    let translation = Vec3::splat(size as f32 / -2.0);
     let vertices: Vec<_> = vertices
         .into_iter()
         .map(|v| v + translation)
@@ -46,14 +45,14 @@ pub fn generate_world(seed: u64) -> (Mesh, Collider) {
         vertices.into_iter().map(|v| v.into()).collect(),
         collider_indices,
     );
-    (mesh, collider)
+    (mesh, collider, offset)
 }
 
 #[instrument(skip(input))]
 fn deduplicate_vertices(input: Vec<Vec3>) -> (Vec<Vec3>, Vec<u32>) {
     let start = Instant::now();
     let tree = construct_tree(&input);
-    info!(
+    debug!(
         "Constructed tree in {:.3}ms",
         start.elapsed().as_secs_f32() * 1000.0
     );
@@ -77,7 +76,7 @@ fn deduplicate_vertices(input: Vec<Vec3>) -> (Vec<Vec3>, Vec<u32>) {
             },
         );
     }
-    info!(
+    debug!(
         "Deduplicated vertices in {:.3}ms, removed {:.2}% of vertices",
         start.elapsed().as_secs_f32() * 1000.0,
         (1.0 - vertices.len() as f32 / (indices.len() as f32)) * 100.0
@@ -90,7 +89,13 @@ fn deduplicate_vertices(input: Vec<Vec3>) -> (Vec<Vec3>, Vec<u32>) {
 }
 
 #[instrument(skip_all)]
-fn marching_cubes(width: usize, height: usize, depth: usize, seed: u64) -> Vec<Vec3> {
+fn marching_cubes(
+    width: usize,
+    height: usize,
+    depth: usize,
+    seed: u64,
+    noise_offset: Vec3,
+) -> Vec<Vec3> {
     let noise = init_noise(seed);
     let mut vertices = vec![];
 
@@ -101,7 +106,8 @@ fn marching_cubes(width: usize, height: usize, depth: usize, seed: u64) -> Vec<V
                 let mut values = [0.0; 8];
                 for (i, offset) in POINT_OFFSETS.iter().enumerate() {
                     let p = add_points([x, y, z], *offset);
-                    let value = sample_noise(p, &noise);
+                    let p = point_to_vec3(p);
+                    let value = sample_noise(p + noise_offset, &noise);
                     if value > FLOOR {
                         configuration |= 1 << i;
                     }
@@ -130,8 +136,8 @@ fn point_to_vec3(point: [usize; 3]) -> Vec3 {
     Vec3::new(point[0] as f32, point[1] as f32, point[2] as f32)
 }
 
-fn sample_noise(point: [usize; 3], noise: &FastNoise) -> f32 {
-    noise.get_noise3d(point[0] as f32, point[1] as f32, point[2] as f32)
+fn sample_noise(point: Vec3, noise: &FastNoise) -> f32 {
+    noise.get_noise3d(point.x, point.y, point.z)
 }
 
 fn add_points(p1: [usize; 3], p2: [usize; 3]) -> [usize; 3] {

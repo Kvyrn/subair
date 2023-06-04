@@ -35,7 +35,7 @@ pub struct WorldInfo {
 struct WorldMaterial(Handle<StandardMaterial>);
 
 #[derive(Component)]
-pub struct WorldMeshTask(Task<(Mesh, Collider)>);
+pub struct WorldMeshTask(Task<(Mesh, Collider, Vec3)>);
 
 fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>) {
     let handle = materials.add(StandardMaterial {
@@ -48,12 +48,15 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
 fn schedule_world_gen(info: Res<WorldInfo>, mut commands: Commands) {
     let pool = AsyncComputeTaskPool::get();
     let seed = info.seed;
-    let task = pool.spawn(async move {
-        std::thread::spawn(move || generate::generate_world(seed))
-            .join()
-            .unwrap()
-    });
-    commands.spawn(WorldMeshTask(task));
+    for x in 0..10 {
+        for y in 0..10 {
+            for z in 0..10 {
+                let offset = Vec3::new(x as f32 * 31.0, y as f32 * 31.0, z as f32 * 31.0);
+                let task = pool.spawn(async move { generate::generate_world(seed, offset, 32) });
+                commands.spawn(WorldMeshTask(task));
+            }
+        }
+    }
 }
 
 fn collect_world_mesh(
@@ -63,11 +66,12 @@ fn collect_world_mesh(
     material: Res<WorldMaterial>,
 ) {
     for (entity, mut task) in tasks.iter_mut() {
-        if let Some((mesh, collider)) = block_on(poll_once(&mut task.0)) {
+        if let Some((mesh, collider, offset)) = block_on(poll_once(&mut task.0)) {
             commands
                 .spawn(PbrBundle {
                     material: material.0.clone(),
                     mesh: meshes.add(mesh),
+                    transform: Transform::from_translation(offset),
                     ..default()
                 })
                 .insert((RigidBody::Fixed, collider));
