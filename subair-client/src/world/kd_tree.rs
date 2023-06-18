@@ -20,7 +20,7 @@ fn search_for_close_points(
     match node {
         Tree3d::Leaf(point) => {
             if point.0.distance_squared(searched_point) < range {
-                point_consumer(*point)
+                point_consumer(*point);
             }
         }
         Tree3d::Branch {
@@ -29,7 +29,7 @@ fn search_for_close_points(
             axis,
         } => {
             if point.0.distance_squared(searched_point) < range * range {
-                point_consumer(*point)
+                point_consumer(*point);
             }
 
             let distance = signed_distance_on_axis(point.0, searched_point, *axis);
@@ -50,7 +50,7 @@ fn search_for_close_points(
             axis: _,
         } => {
             if point.0.distance_squared(searched_point) < range * range {
-                point_consumer(*point)
+                point_consumer(*point);
             }
             // There should only ever be one leaf left in this branch so this
             // operation is not expensive

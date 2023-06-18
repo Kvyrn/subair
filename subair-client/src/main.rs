@@ -41,7 +41,7 @@ fn capture_cursor(
     if key.any_pressed([KeyCode::Escape, KeyCode::Q]) {
         for mut win in windows.iter_mut() {
             win.cursor.visible = true;
-            win.cursor.grab_mode = CursorGrabMode::None
+            win.cursor.grab_mode = CursorGrabMode::None;
         }
     }
 }
